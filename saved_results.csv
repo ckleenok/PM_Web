@@ -1,0 +1,3 @@
+Ticker,Company Name,Buy Date,Buy Price,Current Price,Return,MACD_0,MACD_1,MACD_2,MACD_3,MACD_4,Profit ≥ 7%,Bollinger Touch,Action
+449450,PLUS K방산,,,44915.0,,-52.72,-63.91,-74.14,-94.54,-100.0,,❌,🟢 HOLD
+017670,SK텔레콤,,,53900.0,,44.75,45.9,39.0,-7.91,-44.62,,❌,🟢 HOLD
