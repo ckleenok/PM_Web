@@ -26,10 +26,10 @@ MACD_SELL_THRESHOLD = 80
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 st.write("SUPABASE_URL:", repr(st.secrets["SUPABASE_URL"]))
 st.write("SUPABASE_KEY:", repr(st.secrets["SUPABASE_KEY"]))
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class StockAnalyzer(QWidget):
 
