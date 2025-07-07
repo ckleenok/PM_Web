@@ -11,6 +11,8 @@ import os
 from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
+import streamlit as st
+from supabase import create_client, Client
 
 warnings.filterwarnings('ignore', category=FutureWarning, message="'S' is deprecated")
 warnings.filterwarnings('ignore', category=FutureWarning, message=".*chained assignment.*")
@@ -21,8 +23,13 @@ STOP_LOSS_THRESHOLD = -0.0175  # -1.75%
 PROFIT_TAKE_THRESHOLD = 0.07  # +7%
 MACD_SELL_THRESHOLD = 80
 
-SUPABASE_URL = "https://ubwpmmkncpnscvdzgssa.supabase.co"  # 본인 프로젝트 URL
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVid3BtbWtuY3Buc2N2ZHpnc3NhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMDU5ODEsImV4cCI6MjA2NjU4MTk4MX0.794UpgAGC0AajAQVvRpACGpWDh-GRSvW-t5V9FVGY-I"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+st.write("SUPABASE_URL:", repr(st.secrets["SUPABASE_URL"]))
+st.write("SUPABASE_KEY:", repr(st.secrets["SUPABASE_KEY"]))
 
 class StockAnalyzer(QWidget):
 
