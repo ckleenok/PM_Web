@@ -156,41 +156,33 @@ def main():
     # 표 표시 및 편집
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
-        df = df.reindex(columns=COLUMNS)  # 컬럼 순서 강제
-        # 개별 삭제용 컬럼 추가
-        df['삭제'] = ''
-        for i in df.index:
-            df.at[i, '삭제'] = f"삭제_{i}"
-        edited_df = st.data_editor(
-            df,
-            num_rows="dynamic",
-            key="data_editor"
-        )
+        df = df.reindex(columns=COLUMNS)
+        st.data_editor(df, num_rows="dynamic", key="data_editor")
 
-        # 개별 삭제 버튼 UI
-        for i in range(len(edited_df)):
-            btn_key = f"delete_row_{i}"
-            if st.button("🗑️", key=btn_key):
-                # 해당 행 삭제
-                edited_df = edited_df.drop(i).reset_index(drop=True)
-                # Supabase에도 반영
-                st.session_state['data'] = edited_df.drop(columns=['삭제']).reindex(columns=COLUMNS).to_dict('records')
-                save_to_supabase(USER_ID, st.session_state['data'])
-                st.experimental_rerun()
+        # 행별 삭제 버튼
+        for i, row in df.iterrows():
+            col1, col2 = st.columns([10, 1])
+            with col2:
+                if st.button("🗑️", key=f"delete_row_{i}"):
+                    # 해당 행 삭제
+                    df = df.drop(i).reset_index(drop=True)
+                    st.session_state['data'] = df.to_dict('records')
+                    save_to_supabase(USER_ID, st.session_state['data'])
+                    st.experimental_rerun()
 
         # 수익률, Profit ≥ 7%, Action 자동 계산
-        for i, row in edited_df.iterrows():
+        for i, row in df.iterrows():
             try:
                 buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
                 current_price = float(row["Current Price"])
                 if buy_price:
                     profit_pct = (current_price - buy_price) / buy_price
-                    edited_df.at[i, "Return"] = f"{profit_pct * 100:.2f}%"
+                    df.at[i, "Return"] = f"{profit_pct * 100:.2f}%"
                     profit_met = int(profit_pct >= PROFIT_TAKE_THRESHOLD)
-                    edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_met else "❌"
+                    df.at[i, "Profit ≥ 7%"] = "✔️" if profit_met else "❌"
                 else:
-                    edited_df.at[i, "Return"] = ""
-                    edited_df.at[i, "Profit ≥ 7%"] = ""
+                    df.at[i, "Return"] = ""
+                    df.at[i, "Profit ≥ 7%"] = ""
                 # Action 계산
                 macd_values = [float(row.get(f"MACD_{j}", 0)) for j in range(5)]
                 action = "🟢 HOLD"
@@ -199,13 +191,11 @@ def main():
                         action = "✅ SELL"
                     elif MACD_BUY_RANGE[0] <= macd_values[-1] <= MACD_BUY_RANGE[1] and macd_values[-1] > macd_values[-2]:
                         action = "💰 BUY"
-                edited_df.at[i, "Action"] = action
+                df.at[i, "Action"] = action
             except Exception as e:
-                edited_df.at[i, "Return"] = ""
-                edited_df.at[i, "Profit ≥ 7%"] = ""
-                edited_df.at[i, "Action"] = ""
-        # 세션 상태 업데이트 (컬럼 순서 강제)
-        st.session_state['data'] = edited_df.drop(columns=['삭제']).reindex(columns=COLUMNS).to_dict('records')
+                df.at[i, "Return"] = ""
+                df.at[i, "Profit ≥ 7%"] = ""
+                df.at[i, "Action"] = ""
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(4)
