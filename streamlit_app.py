@@ -159,35 +159,25 @@ def main():
         df = pd.DataFrame(st.session_state['data'])
         df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
         df.insert(0, "No.", range(1, len(df) + 1))
-        st.data_editor(df, num_rows="dynamic", key="data_editor")
+        edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
 
-        # 행별 삭제 버튼
-        for i, row in df.iterrows():
-            col1, col2 = st.columns([10, 1])
-            with col2:
-                if st.button("🗑️", key=f"delete_row_{i}"):
-                    df = df.drop(i).reset_index(drop=True)
-                    st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
-                    save_to_supabase(USER_ID, st.session_state['data'])
-                    st.experimental_rerun()
-
-        # Return, Profit ≥ 7% 계산
-        for i, row in df.iterrows():
+        # Buy Price가 입력(수정)되면 Return, Profit ≥ 7% 자동 계산
+        for i, row in edited_df.iterrows():
             try:
                 buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
                 current_price = float(row["Current Price"])
                 if buy_price:
                     profit_pct = (current_price - buy_price) / buy_price * 100
-                    df.at[i, "Return"] = f"{profit_pct:.2f}%"
-                    df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
+                    edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
+                    edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
                 else:
-                    df.at[i, "Return"] = ""
-                    df.at[i, "Profit ≥ 7%"] = ""
+                    edited_df.at[i, "Return"] = ""
+                    edited_df.at[i, "Profit ≥ 7%"] = ""
             except Exception:
-                df.at[i, "Return"] = ""
-                df.at[i, "Profit ≥ 7%"] = ""
+                edited_df.at[i, "Return"] = ""
+                edited_df.at[i, "Profit ≥ 7%"] = ""
         # 세션 상태 업데이트
-        st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+        st.session_state['data'] = edited_df.drop(columns=["No."]).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(4)
