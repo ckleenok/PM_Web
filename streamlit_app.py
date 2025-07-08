@@ -7,6 +7,13 @@ import requests
 from bs4 import BeautifulSoup
 import os
 
+# --- 컬럼 순서 글로벌 상수 선언 ---
+COLUMNS = [
+    "Action", "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
+    "Return", "Ticker", "Buy Date", "Buy Price", "Company Name",
+    "Current Price", "Profit ≥ 7%", "Bollinger Touch"
+]
+
 # --- Supabase 연동 ---
 # pip install supabase
 from supabase import create_client, Client
@@ -25,12 +32,6 @@ def save_to_supabase(user_id, data):
 def load_from_supabase(user_id):
     res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
     if res.data:
-        # 컬럼 순서 강제
-        COLUMNS = [
-            "Action", "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
-            "Return", "Ticker", "Buy Date", "Buy Price", "Company Name",
-            "Current Price", "Profit ≥ 7%", "Bollinger Touch"
-        ]
         df = pd.DataFrame(res.data[0]["data"])
         df = df.reindex(columns=COLUMNS)
         return df.to_dict('records')
