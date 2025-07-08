@@ -172,7 +172,6 @@ def main():
             filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
             st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
             save_to_supabase(USER_ID, st.session_state['data'])
-            st.experimental_rerun()
 
         # 수익률 재계산 버튼
         if st.button("수익률 재계산"):
