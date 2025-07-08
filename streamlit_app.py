@@ -211,9 +211,10 @@ def main():
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(4)
-    if cols2[0].button("Reset"):
+    if cols2[0].button("모든 데이터 삭제"):
+        delete_supabase_data(USER_ID)
         st.session_state['data'] = []
-        st.success("초기화 완료!")
+        st.success("모든 데이터가 완전히 삭제되었습니다.")
     if cols2[1].button("Supabase에 저장"):
         save_to_supabase(USER_ID, st.session_state['data'])
         st.success("Supabase에 저장 완료!")
@@ -227,10 +228,6 @@ def main():
             st.success("Supabase에서 불러오기 완료!")
         else:
             st.warning("데이터를 불러올 수 없습니다.")
-    if cols2[3].button("기존 데이터삭제"):
-        delete_supabase_data(USER_ID)
-        st.session_state['data'] = []
-        st.success("Supabase의 기존 데이터가 모두 삭제되었습니다.")
 
 if __name__ == "__main__":
     main() 
