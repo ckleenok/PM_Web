@@ -131,9 +131,15 @@ def main():
                         company_name = get_naver_company_name(ticker_code)
                         df = calculate_indicators(df)
                         macd_recent5 = df['MACD_Norm'].iloc[-5:].round(2).tolist()
+                        # 볼린저 정규화: (close - Upper) 기준, 6개월간 min/max로 -100~100
+                        bollinger_diff = df['close'] - df['Upper']
+                        boll_min = bollinger_diff.min()
+                        boll_max = bollinger_diff.max()
+                        if boll_max - boll_min != 0:
+                            boll_norm = (bollinger_diff.iloc[-1] - boll_min) / (boll_max - boll_min) * 200 - 100
+                        else:
+                            boll_norm = 0
                         current_price = df['close'].iloc[-1]
-                        upper_band = df['Upper'].iloc[-1]
-                        bollinger_touch = "✔️" if current_price >= upper_band else "❌"
                         row_dict = {
                             "Company Name": company_name,
                             "Buy Price": "",
@@ -145,7 +151,7 @@ def main():
                             "MACD_3": macd_recent5[3] if len(macd_recent5) > 3 else "",
                             "MACD_4": macd_recent5[4] if len(macd_recent5) > 4 else "",
                             "Profit ≥ 7%": "",
-                            "Bollinger Touch": bollinger_touch,
+                            "Bollinger Touch": round(boll_norm, 2),
                         }
                         ordered_row = {col: row_dict.get(col, "") for col in COLUMNS if col != "No."}
                         st.session_state['data'].append(ordered_row)
@@ -159,6 +165,16 @@ def main():
         df = pd.DataFrame(st.session_state['data'])
         df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
         df.insert(0, "No.", range(1, len(df) + 1))
+        # 볼린저 정규화: (close - Upper) 기준, 6개월간 min/max로 -100~100
+        if 'Current Price' in df.columns and 'Bollinger Touch' in df.columns:
+            for idx, row in df.iterrows():
+                try:
+                    # 티커별로 6개월 데이터 다시 불러와서 정규화
+                    ticker_name = row.get('Company Name', '')
+                    # (여기서는 이미 값이 있으므로, pass)
+                    pass
+                except Exception:
+                    pass
         # 체크박스 컬럼 추가
         if 'selected' not in df.columns:
             df.insert(0, 'selected', False)
@@ -168,7 +184,6 @@ def main():
 
         # 선택 삭제 버튼
         if st.button("선택 삭제"):
-            # 체크된 행만 제외하고 나머지로 갱신
             filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
             st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
             save_to_supabase(USER_ID, st.session_state['data'])
