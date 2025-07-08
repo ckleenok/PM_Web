@@ -153,6 +153,7 @@ def main():
     # 표 표시 및 편집
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
+        df = df.reindex(columns=COLUMNS)  # 컬럼 순서 강제
         # Buy Date, Buy Price는 직접 입력 가능하게 (columns 인자 제거)
         edited_df = st.data_editor(
             df,
@@ -186,10 +187,10 @@ def main():
                 edited_df.at[i, "Return"] = ""
                 edited_df.at[i, "Profit ≥ 7%"] = ""
                 edited_df.at[i, "Action"] = ""
-        # 표 다시 표시
-        st.dataframe(edited_df, use_container_width=True)
-        # 세션 상태 업데이트
-        st.session_state['data'] = edited_df.to_dict('records')
+        # 표 다시 표시 (컬럼 순서 강제)
+        st.dataframe(edited_df.reindex(columns=COLUMNS), use_container_width=True)
+        # 세션 상태 업데이트 (컬럼 순서 강제)
+        st.session_state['data'] = edited_df.reindex(columns=COLUMNS).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(3)
