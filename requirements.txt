@@ -3,4 +3,5 @@ pandas
 numpy
 requests
 beautifulsoup4
-supabase 
+supabase>=2.0.0
+toml 
