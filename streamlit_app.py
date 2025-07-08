@@ -105,7 +105,15 @@ def main():
     st.title("Portfolio Manager v3 (Web)")
 
     if 'data' not in st.session_state:
-        st.session_state['data'] = []
+        # 앱 첫 접속 시 Supabase에서 자동으로 데이터 불러오기
+        data = load_from_supabase(USER_ID)
+        if data:
+            df = pd.DataFrame(data)
+            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+            df.insert(0, "No.", range(1, len(df) + 1))
+            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+        else:
+            st.session_state['data'] = []
 
     # 티커 입력
     with st.form(key="add_ticker_form"):
