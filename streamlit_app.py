@@ -12,8 +12,8 @@ import os
 from supabase import create_client, Client
 
 # 아래 두 값을 본인 Supabase 콘솔에서 복사해 입력하세요
-SUPABASE_URL = "<YOUR_SUPABASE_URL>"  # 예: "https://xxxx.supabase.co"
-SUPABASE_KEY = "<YOUR_SUPABASE_ANON_KEY>"  # 예: "eyJ..."
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
