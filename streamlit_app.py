@@ -117,9 +117,12 @@ def main():
 
     # 티커 입력
     with st.form(key="add_ticker_form"):
-        cols = st.columns([2,1])
-        ticker = cols[0].text_input("Add Ticker (6자리 숫자)")
+        cols = st.columns([1, 1, 1, 1, 1])
+        ticker = cols[0].text_input("Add Ticker (6자리 숫자)", key="ticker_input")
         add_btn = cols[1].form_submit_button("Add Ticker")
+        delete_all_btn = cols[2].form_submit_button("모든 데이터 삭제")
+        save_btn = cols[3].form_submit_button("Supabase에 저장")
+        load_btn = cols[4].form_submit_button("Supabase에서 불러오기")
 
     if add_btn:
         if ticker:
@@ -159,6 +162,24 @@ def main():
                         st.warning("데이터를 불러올 수 없습니다.")
             else:
                 st.warning("6자리 숫자 티커를 입력하세요.")
+
+    if delete_all_btn:
+        delete_supabase_data(USER_ID)
+        st.session_state['data'] = []
+        st.success("모든 데이터가 완전히 삭제되었습니다.")
+    if save_btn:
+        save_to_supabase(USER_ID, st.session_state['data'])
+        st.success("Supabase에 저장 완료!")
+    if load_btn:
+        data = load_from_supabase(USER_ID)
+        if data:
+            df = pd.DataFrame(data)
+            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+            df.insert(0, "No.", range(1, len(df) + 1))
+            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+            st.success("Supabase에서 불러오기 완료!")
+        else:
+            st.warning("데이터를 불러올 수 없습니다.")
 
     # 표 표시 및 편집
     if st.session_state['data']:
@@ -208,26 +229,6 @@ def main():
 
         # 세션 상태 업데이트 (편집 내용 반영)
         st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
-
-    # 저장/불러오기/리셋/Supabase 버튼
-    cols2 = st.columns(4)
-    if cols2[0].button("모든 데이터 삭제"):
-        delete_supabase_data(USER_ID)
-        st.session_state['data'] = []
-        st.success("모든 데이터가 완전히 삭제되었습니다.")
-    if cols2[1].button("Supabase에 저장"):
-        save_to_supabase(USER_ID, st.session_state['data'])
-        st.success("Supabase에 저장 완료!")
-    if cols2[2].button("Supabase에서 불러오기"):
-        data = load_from_supabase(USER_ID)
-        if data:
-            df = pd.DataFrame(data)
-            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
-            df.insert(0, "No.", range(1, len(df) + 1))
-            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
-            st.success("Supabase에서 불러오기 완료!")
-        else:
-            st.warning("데이터를 불러올 수 없습니다.")
 
 if __name__ == "__main__":
     main() 
