@@ -183,23 +183,14 @@ def main():
         st.session_state['data'] = edited_df.to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
-    cols2 = st.columns(5)
-    if cols2[0].button("Save Results"):
-        pd.DataFrame(st.session_state['data']).to_csv("saved_results.csv", index=False)
-        st.success("저장 완료!")
-    if cols2[1].button("Load Saved"):
-        if os.path.exists("saved_results.csv"):
-            st.session_state['data'] = pd.read_csv("saved_results.csv").to_dict('records')
-            st.success("불러오기 완료!")
-        else:
-            st.warning("저장된 파일이 없습니다.")
-    if cols2[2].button("Reset"):
+    cols2 = st.columns(3)
+    if cols2[0].button("Reset"):
         st.session_state['data'] = []
         st.success("초기화 완료!")
-    if cols2[3].button("Supabase에 저장"):
+    if cols2[1].button("Supabase에 저장"):
         save_to_supabase(USER_ID, st.session_state['data'])
         st.success("Supabase에 저장 완료!")
-    if cols2[4].button("Supabase에서 불러오기"):
+    if cols2[2].button("Supabase에서 불러오기"):
         st.session_state['data'] = load_from_supabase(USER_ID)
         st.success("Supabase에서 불러오기 완료!")
 
