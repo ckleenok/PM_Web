@@ -132,11 +132,10 @@ def main():
                         company_name = get_naver_company_name(ticker_code)
                         df = calculate_indicators(df)
                         macd_recent5 = df['MACD_Norm'].iloc[-5:].round(2).tolist()
-                        macd_dates = df.iloc[-5:].index.strftime('%Y-%m-%d').tolist()
                         current_price = df['close'].iloc[-1]
                         upper_band = df['Upper'].iloc[-1]
                         bollinger_touch = "✔️" if current_price >= upper_band else "❌"
-                        st.session_state['data'].append({
+                        row_dict = {
                             "Ticker": ticker_code,
                             "Company Name": company_name,
                             "Buy Date": "",
@@ -147,7 +146,10 @@ def main():
                             "Profit ≥ 7%": "",
                             "Bollinger Touch": bollinger_touch,
                             "Action": ""
-                        })
+                        }
+                        # 컬럼 순서 강제
+                        ordered_row = {col: row_dict.get(col, "") for col in COLUMNS}
+                        st.session_state['data'].append(ordered_row)
                     else:
                         st.warning("데이터를 불러올 수 없습니다.")
             else:
