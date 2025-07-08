@@ -25,6 +25,18 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 USER_ID = "test_user"
 
+def to_serializable(data):
+    def convert_value(val):
+        if isinstance(val, (np.generic, np.ndarray)):
+            return val.item() if hasattr(val, 'item') else val.tolist()
+        if isinstance(val, (pd.Timestamp, pd.Timedelta)):
+            return str(val)
+        return val
+    return [
+        {k: convert_value(v) for k, v in row.items()}
+        for row in data
+    ]
+
 def save_to_supabase(user_id, data):
     supabase.table("portfolio").insert({"user_id": user_id, "data": data}).execute()
 
@@ -168,7 +180,7 @@ def main():
         st.session_state['data'] = []
         st.success("모든 데이터가 완전히 삭제되었습니다.")
     if save_btn:
-        save_to_supabase(USER_ID, st.session_state['data'])
+        save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
         st.success("Supabase에 저장 완료!")
     if load_btn:
         data = load_from_supabase(USER_ID)
@@ -207,7 +219,7 @@ def main():
         if st.button("선택 삭제"):
             filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
             st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
-            save_to_supabase(USER_ID, st.session_state['data'])
+            save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
 
         # 수익률 재계산 버튼
         if st.button("수익률 재계산"):
