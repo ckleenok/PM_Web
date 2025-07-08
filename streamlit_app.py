@@ -6,25 +6,24 @@ from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 import os
-
-# --- 컬럼 순서 글로벌 상수 선언 ---
-COLUMNS = [
-    "Action", "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
-    "Return", "Ticker", "Buy Date", "Buy Price", "Company Name",
-    "Current Price", "Profit ≥ 7%", "Bollinger Touch"
-]
-
-# --- Supabase 연동 ---
-# pip install supabase
 from supabase import create_client, Client
 
-# 아래 두 값을 본인 Supabase 콘솔에서 복사해 입력하세요
+# --- 컬럼 순서 및 상수 ---
+COLUMNS = [
+    "No.", "Company Name", "Buy Price", "Current Price", "Return",
+    "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
+    "Profit ≥ 7%", "Bollinger Touch"
+]
+
+MACD_BUY_RANGE = (-100, -80)
+STOP_LOSS_THRESHOLD = -0.0175
+PROFIT_TAKE_THRESHOLD = 0.07
+MACD_SELL_THRESHOLD = 80
+
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-USER_ID = "test_user"  # 로그인 기능 없으므로 임시 고정
+USER_ID = "test_user"
 
 def save_to_supabase(user_id, data):
     supabase.table("portfolio").insert({"user_id": user_id, "data": data}).execute()
@@ -33,14 +32,14 @@ def load_from_supabase(user_id):
     res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
     if res.data:
         df = pd.DataFrame(res.data[0]["data"])
-        df = df.reindex(columns=COLUMNS)
+        df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+        df.insert(0, "No.", range(1, len(df) + 1))
         return df.to_dict('records')
     return []
 
 def delete_supabase_data(user_id):
     supabase.table("portfolio").delete().eq("user_id", user_id).execute()
 
-# --- 크롤링 함수 (main.py에서 복사) ---
 def get_naver_price_history(ticker, months=6):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=months*30)
@@ -85,13 +84,6 @@ def get_naver_company_name(ticker):
         return name
     return ""
 
-# --- 전략 파라미터 ---
-MACD_BUY_RANGE = (-100, -80)
-STOP_LOSS_THRESHOLD = -0.0175
-PROFIT_TAKE_THRESHOLD = 0.07
-MACD_SELL_THRESHOLD = 80
-
-# --- 지표 계산 함수 ---
 def calculate_indicators(df):
     df = df.copy()
     df = df.set_index('date')
@@ -108,7 +100,6 @@ def calculate_indicators(df):
     df['Upper'] = df['MA20'] + 2 * df['STD20']
     return df
 
-# --- Streamlit 앱 ---
 def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
     st.title("Portfolio Manager v3 (Web)")
@@ -136,19 +127,19 @@ def main():
                         upper_band = df['Upper'].iloc[-1]
                         bollinger_touch = "✔️" if current_price >= upper_band else "❌"
                         row_dict = {
-                            "Ticker": ticker_code,
                             "Company Name": company_name,
-                            "Buy Date": "",
                             "Buy Price": "",
                             "Current Price": current_price,
                             "Return": "",
-                            **{f"MACD_{i}": v for i, v in enumerate(macd_recent5)},
+                            "MACD_0": macd_recent5[0] if len(macd_recent5) > 0 else "",
+                            "MACD_1": macd_recent5[1] if len(macd_recent5) > 1 else "",
+                            "MACD_2": macd_recent5[2] if len(macd_recent5) > 2 else "",
+                            "MACD_3": macd_recent5[3] if len(macd_recent5) > 3 else "",
+                            "MACD_4": macd_recent5[4] if len(macd_recent5) > 4 else "",
                             "Profit ≥ 7%": "",
                             "Bollinger Touch": bollinger_touch,
-                            "Action": ""
                         }
-                        # 컬럼 순서 강제
-                        ordered_row = {col: row_dict.get(col, "") for col in COLUMNS}
+                        ordered_row = {col: row_dict.get(col, "") for col in COLUMNS if col != "No."}
                         st.session_state['data'].append(ordered_row)
                     else:
                         st.warning("데이터를 불러올 수 없습니다.")
@@ -158,7 +149,8 @@ def main():
     # 표 표시 및 편집
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
-        df = df.reindex(columns=COLUMNS)
+        df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+        df.insert(0, "No.", range(1, len(df) + 1))
         st.data_editor(df, num_rows="dynamic", key="data_editor")
 
         # 행별 삭제 버튼
@@ -166,38 +158,28 @@ def main():
             col1, col2 = st.columns([10, 1])
             with col2:
                 if st.button("🗑️", key=f"delete_row_{i}"):
-                    # 해당 행 삭제
                     df = df.drop(i).reset_index(drop=True)
-                    st.session_state['data'] = df.to_dict('records')
+                    st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
                     save_to_supabase(USER_ID, st.session_state['data'])
                     st.experimental_rerun()
 
-        # 수익률, Profit ≥ 7%, Action 자동 계산
+        # Return, Profit ≥ 7% 계산
         for i, row in df.iterrows():
             try:
                 buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
                 current_price = float(row["Current Price"])
                 if buy_price:
-                    profit_pct = (current_price - buy_price) / buy_price
-                    df.at[i, "Return"] = f"{profit_pct * 100:.2f}%"
-                    profit_met = int(profit_pct >= PROFIT_TAKE_THRESHOLD)
-                    df.at[i, "Profit ≥ 7%"] = "✔️" if profit_met else "❌"
+                    profit_pct = (current_price - buy_price) / buy_price * 100
+                    df.at[i, "Return"] = f"{profit_pct:.2f}%"
+                    df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
                 else:
                     df.at[i, "Return"] = ""
                     df.at[i, "Profit ≥ 7%"] = ""
-                # Action 계산
-                macd_values = [float(row.get(f"MACD_{j}", 0)) for j in range(5)]
-                action = "🟢 HOLD"
-                if all(isinstance(val, float) for val in macd_values):
-                    if macd_values[-1] >= MACD_SELL_THRESHOLD and macd_values[-1] < macd_values[-2]:
-                        action = "✅ SELL"
-                    elif MACD_BUY_RANGE[0] <= macd_values[-1] <= MACD_BUY_RANGE[1] and macd_values[-1] > macd_values[-2]:
-                        action = "💰 BUY"
-                df.at[i, "Action"] = action
-            except Exception as e:
+            except Exception:
                 df.at[i, "Return"] = ""
                 df.at[i, "Profit ≥ 7%"] = ""
-                df.at[i, "Action"] = ""
+        # 세션 상태 업데이트
+        st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(4)
@@ -211,8 +193,9 @@ def main():
         data = load_from_supabase(USER_ID)
         if data:
             df = pd.DataFrame(data)
-            df = df.reindex(columns=COLUMNS)
-            st.session_state['data'] = df.to_dict('records')
+            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+            df.insert(0, "No.", range(1, len(df) + 1))
+            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
             st.success("Supabase에서 불러오기 완료!")
         else:
             st.warning("데이터를 불러올 수 없습니다.")
