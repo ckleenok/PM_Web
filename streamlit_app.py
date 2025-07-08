@@ -159,7 +159,20 @@ def main():
         df = pd.DataFrame(st.session_state['data'])
         df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
         df.insert(0, "No.", range(1, len(df) + 1))
+        # 체크박스 컬럼 추가
+        if 'selected' not in df.columns:
+            df.insert(0, 'selected', False)
+        else:
+            df['selected'] = df['selected'].fillna(False)
         edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
+
+        # 선택 삭제 버튼
+        if st.button("선택 삭제"):
+            # 체크된 행만 제외하고 나머지로 갱신
+            filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
+            st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
+            save_to_supabase(USER_ID, st.session_state['data'])
+            st.experimental_rerun()
 
         # 수익률 재계산 버튼
         if st.button("수익률 재계산"):
@@ -177,10 +190,10 @@ def main():
                 except Exception:
                     edited_df.at[i, "Return"] = ""
                     edited_df.at[i, "Profit ≥ 7%"] = ""
-            st.session_state['data'] = edited_df.drop(columns=["No."]).to_dict('records')
+            st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
 
         # 세션 상태 업데이트 (편집 내용 반영)
-        st.session_state['data'] = edited_df.drop(columns=["No."]).to_dict('records')
+        st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
     cols2 = st.columns(4)
