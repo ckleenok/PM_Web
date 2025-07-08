@@ -37,6 +37,9 @@ def load_from_supabase(user_id):
         return df.to_dict('records')
     return []
 
+def delete_supabase_data(user_id):
+    supabase.table("portfolio").delete().eq("user_id", user_id).execute()
+
 # --- 크롤링 함수 (main.py에서 복사) ---
 def get_naver_price_history(ticker, months=6):
     end_date = datetime.now()
@@ -154,12 +157,26 @@ def main():
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
         df = df.reindex(columns=COLUMNS)  # 컬럼 순서 강제
-        # Buy Date, Buy Price는 직접 입력 가능하게 (columns 인자 제거)
+        # 개별 삭제용 컬럼 추가
+        df['삭제'] = ''
+        for i in df.index:
+            df.at[i, '삭제'] = f"삭제_{i}"
         edited_df = st.data_editor(
             df,
             num_rows="dynamic",
             key="data_editor"
         )
+
+        # 개별 삭제 버튼 UI
+        for i in range(len(edited_df)):
+            btn_key = f"delete_row_{i}"
+            if st.button("🗑️", key=btn_key):
+                # 해당 행 삭제
+                edited_df = edited_df.drop(i).reset_index(drop=True)
+                # Supabase에도 반영
+                st.session_state['data'] = edited_df.drop(columns=['삭제']).reindex(columns=COLUMNS).to_dict('records')
+                save_to_supabase(USER_ID, st.session_state['data'])
+                st.experimental_rerun()
 
         # 수익률, Profit ≥ 7%, Action 자동 계산
         for i, row in edited_df.iterrows():
@@ -188,12 +205,12 @@ def main():
                 edited_df.at[i, "Profit ≥ 7%"] = ""
                 edited_df.at[i, "Action"] = ""
         # 표 다시 표시 (컬럼 순서 강제)
-        st.dataframe(edited_df.reindex(columns=COLUMNS), use_container_width=True)
+        st.dataframe(edited_df.reindex(columns=COLUMNS + ['삭제']), use_container_width=True)
         # 세션 상태 업데이트 (컬럼 순서 강제)
-        st.session_state['data'] = edited_df.reindex(columns=COLUMNS).to_dict('records')
+        st.session_state['data'] = edited_df.drop(columns=['삭제']).reindex(columns=COLUMNS).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
-    cols2 = st.columns(3)
+    cols2 = st.columns(4)
     if cols2[0].button("Reset"):
         st.session_state['data'] = []
         st.success("초기화 완료!")
@@ -209,6 +226,10 @@ def main():
             st.success("Supabase에서 불러오기 완료!")
         else:
             st.warning("데이터를 불러올 수 없습니다.")
+    if cols2[3].button("기존 데이터삭제"):
+        delete_supabase_data(USER_ID)
+        st.session_state['data'] = []
+        st.success("Supabase의 기존 데이터가 모두 삭제되었습니다.")
 
 if __name__ == "__main__":
     main() 
