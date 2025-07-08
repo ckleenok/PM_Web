@@ -25,7 +25,15 @@ def save_to_supabase(user_id, data):
 def load_from_supabase(user_id):
     res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
     if res.data:
-        return res.data[0]["data"]
+        # 컬럼 순서 강제
+        COLUMNS = [
+            "Action", "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
+            "Return", "Ticker", "Buy Date", "Buy Price", "Company Name",
+            "Current Price", "Profit ≥ 7%", "Bollinger Touch"
+        ]
+        df = pd.DataFrame(res.data[0]["data"])
+        df = df.reindex(columns=COLUMNS)
+        return df.to_dict('records')
     return []
 
 # --- 크롤링 함수 (main.py에서 복사) ---
@@ -191,8 +199,14 @@ def main():
         save_to_supabase(USER_ID, st.session_state['data'])
         st.success("Supabase에 저장 완료!")
     if cols2[2].button("Supabase에서 불러오기"):
-        st.session_state['data'] = load_from_supabase(USER_ID)
-        st.success("Supabase에서 불러오기 완료!")
+        data = load_from_supabase(USER_ID)
+        if data:
+            df = pd.DataFrame(data)
+            df = df.reindex(columns=COLUMNS)
+            st.session_state['data'] = df.to_dict('records')
+            st.success("Supabase에서 불러오기 완료!")
+        else:
+            st.warning("데이터를 불러올 수 없습니다.")
 
 if __name__ == "__main__":
     main() 
