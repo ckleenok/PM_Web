@@ -161,22 +161,25 @@ def main():
         df.insert(0, "No.", range(1, len(df) + 1))
         edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
 
-        # Buy Price가 입력(수정)되면 Return, Profit ≥ 7% 자동 계산
-        for i, row in edited_df.iterrows():
-            try:
-                buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
-                current_price = float(row["Current Price"])
-                if buy_price:
-                    profit_pct = (current_price - buy_price) / buy_price * 100
-                    edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
-                    edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
-                else:
+        # 수익률 재계산 버튼
+        if st.button("수익률 재계산"):
+            for i, row in edited_df.iterrows():
+                try:
+                    buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
+                    current_price = float(row["Current Price"])
+                    if buy_price:
+                        profit_pct = (current_price - buy_price) / buy_price * 100
+                        edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
+                        edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
+                    else:
+                        edited_df.at[i, "Return"] = ""
+                        edited_df.at[i, "Profit ≥ 7%"] = ""
+                except Exception:
                     edited_df.at[i, "Return"] = ""
                     edited_df.at[i, "Profit ≥ 7%"] = ""
-            except Exception:
-                edited_df.at[i, "Return"] = ""
-                edited_df.at[i, "Profit ≥ 7%"] = ""
-        # 세션 상태 업데이트
+            st.session_state['data'] = edited_df.drop(columns=["No."]).to_dict('records')
+
+        # 세션 상태 업데이트 (편집 내용 반영)
         st.session_state['data'] = edited_df.drop(columns=["No."]).to_dict('records')
 
     # 저장/불러오기/리셋/Supabase 버튼
