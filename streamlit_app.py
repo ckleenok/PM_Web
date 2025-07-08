@@ -204,8 +204,6 @@ def main():
                 edited_df.at[i, "Return"] = ""
                 edited_df.at[i, "Profit ≥ 7%"] = ""
                 edited_df.at[i, "Action"] = ""
-        # 표 다시 표시 (컬럼 순서 강제)
-        st.dataframe(edited_df.reindex(columns=COLUMNS + ['삭제']), use_container_width=True)
         # 세션 상태 업데이트 (컬럼 순서 강제)
         st.session_state['data'] = edited_df.drop(columns=['삭제']).reindex(columns=COLUMNS).to_dict('records')
 
