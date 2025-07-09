@@ -13,7 +13,7 @@ import uuid
 # --- 컬럼 순서 및 상수 ---
 COLUMNS = [
     "No.", "Company Name", "Buy Price", "Current Price", "Return",
-    "MACD_0", "MACD_1", "MACD_2", "MACD_3", "MACD_4",
+    "MACD_4", "MACD_3", "MACD_2", "MACD_1", "MACD_0",
     "Profit ≥ 7%", "Bollinger Touch"
 ]
 
@@ -179,11 +179,11 @@ def main():
                             "Buy Price": "",
                             "Current Price": current_price,
                             "Return": "",
-                            "MACD_0": macd_recent5[0] if len(macd_recent5) > 0 else "",
-                            "MACD_1": macd_recent5[1] if len(macd_recent5) > 1 else "",
-                            "MACD_2": macd_recent5[2] if len(macd_recent5) > 2 else "",
-                            "MACD_3": macd_recent5[3] if len(macd_recent5) > 3 else "",
                             "MACD_4": macd_recent5[4] if len(macd_recent5) > 4 else "",
+                            "MACD_3": macd_recent5[3] if len(macd_recent5) > 3 else "",
+                            "MACD_2": macd_recent5[2] if len(macd_recent5) > 2 else "",
+                            "MACD_1": macd_recent5[1] if len(macd_recent5) > 1 else "",
+                            "MACD_0": macd_recent5[0] if len(macd_recent5) > 0 else "",
                             "Profit ≥ 7%": "",
                             "Bollinger Touch": round(boll_norm, 2),
                         }
@@ -215,7 +215,18 @@ def main():
     # 표 표시 및 편집
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
-        df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+        # MACD 날짜 컬럼명 동적 생성
+        today = datetime.now().date()
+        macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
+        macd_col_map = {f"MACD_{i}": f"MACD ({macd_dates[i]})" for i in range(4, -1, -1)}
+        display_columns = [
+            "No.", "Company Name", "Buy Price", "Current Price", "Return",
+            macd_col_map["MACD_4"], macd_col_map["MACD_3"], macd_col_map["MACD_2"], macd_col_map["MACD_1"], macd_col_map["MACD_0"],
+            "Profit ≥ 7%", "Bollinger Touch"
+        ]
+        # 내부 데이터는 MACD_4~MACD_0, 표시 컬럼은 날짜 포함
+        df = df.rename(columns=macd_col_map)
+        df = df.reindex(columns=[col for col in display_columns if col != "No."])
         df.insert(0, "No.", range(1, len(df) + 1))
         # 볼린저 정규화: (close - Upper) 기준, 6개월간 min/max로 -100~100
         if 'Current Price' in df.columns and 'Bollinger Touch' in df.columns:
