@@ -9,8 +9,6 @@ import os
 from supabase import create_client, Client
 import re
 import uuid
-from streamlit_autorefresh import st_autorefresh
-import pytz
 from urllib.parse import unquote
 
 # --- 컬럼 순서 및 상수 ---
@@ -141,11 +139,6 @@ def main():
     # 수동 새로고침 버튼
     if st.button("수동 새로고침"):
         st.rerun()
-    # 오전 7시~오후 2시(GMT+7)만 자동 새로고침
-    tz = pytz.timezone('Asia/Bangkok')  # GMT+7
-    now = datetime.now(tz)
-    if 7 <= now.hour < 14:
-        st_autorefresh(interval=2*60*60*1000, key="datarefresh")
     st.title("Portfolio Manager v3 (Web)")
 
     # 쿼리 파라미터에 user_agent가 있으면 세션에 저장하고, 한 번만 rerun
