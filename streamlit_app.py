@@ -134,6 +134,14 @@ def is_safari():
     # iPhone/iPad/Mac Safari 감지
     return bool(re.search(r"(iPhone|iPad|Macintosh).*Safari", user_agent))
 
+def parse_number(val):
+    if isinstance(val, str):
+        val = val.replace(',', '')
+    try:
+        return float(val)
+    except Exception:
+        return None
+
 def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
     # 수동 새로고침, 선택 삭제, 수익률 재계산 버튼을 상단에 배치
@@ -270,8 +278,8 @@ def main():
             if recalc_return:
                 for i, row in edited_df.iterrows():
                     try:
-                        buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
-                        current_price = float(row["Current Price"])
+                        buy_price = parse_number(row["Buy Price"])
+                        current_price = parse_number(row["Current Price"])
                         if buy_price:
                             profit_pct = (current_price - buy_price) / buy_price * 100
                             edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
