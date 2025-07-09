@@ -9,6 +9,8 @@ import os
 from supabase import create_client, Client
 import re
 import uuid
+from streamlit_autorefresh import st_autorefresh
+import pytz
 
 # --- 컬럼 순서 및 상수 ---
 COLUMNS = [
@@ -133,6 +135,14 @@ def is_safari():
 
 def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
+    # 수동 새로고침 버튼
+    if st.button("수동 새로고침"):
+        st.experimental_rerun()
+    # 오전 7시~오후 2시(GMT+7)만 자동 새로고침
+    tz = pytz.timezone('Asia/Bangkok')  # GMT+7
+    now = datetime.now(tz)
+    if 7 <= now.hour < 14:
+        st_autorefresh(interval=30*60*1000, key="datarefresh")
     st.title("Portfolio Manager v3 (Web)")
 
     if 'data' not in st.session_state:
