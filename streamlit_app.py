@@ -217,11 +217,11 @@ def main():
         df = pd.DataFrame(st.session_state['data'])
         # MACD 날짜 컬럼명 동적 생성
         today = datetime.now().date()
-        macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
-        macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(4, -1, -1)}
+        macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(0, 5)]
+        macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(0, 5)}
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
-            macd_dates[4], macd_dates[3], macd_dates[2], macd_dates[1], macd_dates[0],
+            macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
             "Profit ≥ 7%", "Bollinger Touch"
         ]
         # 내부 데이터는 MACD_4~MACD_0, 표시 컬럼은 날짜만
