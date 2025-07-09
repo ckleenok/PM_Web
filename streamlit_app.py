@@ -145,7 +145,7 @@ def main():
     tz = pytz.timezone('Asia/Bangkok')  # GMT+7
     now = datetime.now(tz)
     if 7 <= now.hour < 14:
-        st_autorefresh(interval=30*60*1000, key="datarefresh")
+        st_autorefresh(interval=2*60*60*1000, key="datarefresh")
     st.title("Portfolio Manager v3 (Web)")
 
     # 쿼리 파라미터에 user_agent가 있으면 세션에 저장하고, 한 번만 rerun
