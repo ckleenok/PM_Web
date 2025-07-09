@@ -1,4 +1,5 @@
 streamlit
+dataframe
 pandas
 numpy
 requests
@@ -6,4 +7,5 @@ beautifulsoup4
 supabase>=2.0.0
 toml
 lxml
+streamlit-autorefresh
  
