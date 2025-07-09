@@ -137,7 +137,7 @@ def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
     # 수동 새로고침 버튼
     if st.button("수동 새로고침"):
-        st.experimental_rerun()
+        st.rerun()
     # 오전 7시~오후 2시(GMT+7)만 자동 새로고침
     tz = pytz.timezone('Asia/Bangkok')  # GMT+7
     now = datetime.now(tz)
@@ -262,7 +262,7 @@ def main():
                 filtered_df = filtered_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
                 save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
-                st.experimental_rerun()
+                st.rerun()
             # 수익률 재계산 버튼
             if st.button("수익률 재계산"):
                 for i, row in edited_df.iterrows():
@@ -283,11 +283,12 @@ def main():
                 reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
                 edited_df = edited_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
-                st.experimental_rerun()
+                st.rerun()
             # 세션 상태 업데이트 (편집 내용 반영)
             reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
             edited_df = edited_df.rename(columns=reverse_macd_col_map)
             st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
+            st.rerun()
 
 if __name__ == "__main__":
     main() 
