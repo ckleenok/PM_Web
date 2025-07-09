@@ -136,9 +136,12 @@ def is_safari():
 
 def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
-    # 수동 새로고침 버튼
-    if st.button("수동 새로고침"):
+    # 수동 새로고침, 선택 삭제, 수익률 재계산 버튼을 상단에 배치
+    col_btns = st.columns([1,1,1])
+    if col_btns[0].button("수동 새로고침"):
         st.rerun()
+    delete_selected = col_btns[1].button("선택 삭제")
+    recalc_return = col_btns[2].button("수익률 재계산")
     st.title("Portfolio Manager v3 (Web)")
 
     # 쿼리 파라미터에 user_agent가 있으면 세션에 저장하고, 한 번만 rerun
@@ -253,20 +256,18 @@ def main():
 
         if is_safari():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
-            st.dataframe(df_display)
+            st.dataframe(df_display, height=1000)
         else:
-            edited_df = st.data_editor(df_display, num_rows="dynamic", key="data_editor")
+            edited_df = st.data_editor(df_display, num_rows="dynamic", key="data_editor", height=1000)
             # 선택 삭제 버튼
-            if st.button("선택 삭제"):
+            if delete_selected:
                 filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
-                # 날짜 컬럼을 다시 MACD_4~MACD_0으로 변환
                 reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
                 filtered_df = filtered_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
                 save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
                 st.rerun()
-            # 수익률 재계산 버튼
-            if st.button("수익률 재계산"):
+            if recalc_return:
                 for i, row in edited_df.iterrows():
                     try:
                         buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
@@ -281,16 +282,10 @@ def main():
                     except Exception:
                         edited_df.at[i, "Return"] = ""
                         edited_df.at[i, "Profit ≥ 7%"] = ""
-                # 날짜 컬럼을 다시 MACD_4~MACD_0으로 변환
                 reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
                 edited_df = edited_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
                 st.rerun()
-            # 세션 상태 업데이트 (편집 내용 반영)
-            reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
-            edited_df = edited_df.rename(columns=reverse_macd_col_map)
-            st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
-            st.rerun()
 
 if __name__ == "__main__":
     main() 
