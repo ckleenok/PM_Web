@@ -218,7 +218,7 @@ def main():
         # MACD 날짜 컬럼명 동적 생성
         today = datetime.now().date()
         macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
-        macd_col_map = {f"MACD_{i}": f"MACD ({macd_dates[i]})" for i in range(4, -1, -1)}
+        macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(4, -1, -1)}
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
             macd_col_map["MACD_4"], macd_col_map["MACD_3"], macd_col_map["MACD_2"], macd_col_map["MACD_1"], macd_col_map["MACD_0"],
