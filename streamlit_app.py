@@ -118,7 +118,7 @@ def is_safari():
     # Streamlit에서 User-Agent를 감지하여 사파리(특히 iOS) 여부를 반환
     user_agent = st.session_state.get('user_agent', None)
     if user_agent is None:
-        user_agent = st.experimental_get_query_params().get('user_agent', [None])[0]
+        user_agent = st.query_params.get('user_agent', [None])[0]
     if user_agent is None:
         # JS로 User-Agent를 세션에 저장하도록 유도
         st.markdown("""
