@@ -252,8 +252,7 @@ def main():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
             st.dataframe(df_display)
         else:
-            editor_key = f"data_editor_{uuid.uuid4()}"
-            edited_df = st.data_editor(df_display, num_rows="dynamic", key=editor_key)
+            edited_df = st.data_editor(df_display, num_rows="dynamic", key="data_editor")
             # 선택 삭제 버튼
             if st.button("선택 삭제"):
                 filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
