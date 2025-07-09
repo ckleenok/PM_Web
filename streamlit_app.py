@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import os
 from supabase import create_client, Client
 import re
+import uuid
 
 # --- 컬럼 순서 및 상수 ---
 COLUMNS = [
@@ -236,12 +237,15 @@ def main():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
             st.dataframe(df)
         else:
-            edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
+            editor_key = f"data_editor_{uuid.uuid4()}"
+            edited_df = st.data_editor(df, num_rows="dynamic", key=editor_key)
             # 선택 삭제 버튼
             if st.button("선택 삭제"):
+                # 최신 edited_df에서 selected가 True인 행을 삭제
                 filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
                 st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
                 save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
+                st.experimental_rerun()
             # 수익률 재계산 버튼
             if st.button("수익률 재계산"):
                 for i, row in edited_df.iterrows():
@@ -259,6 +263,7 @@ def main():
                         edited_df.at[i, "Return"] = ""
                         edited_df.at[i, "Profit ≥ 7%"] = ""
                 st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
+                st.experimental_rerun()
             # 세션 상태 업데이트 (편집 내용 반영)
             st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
 
