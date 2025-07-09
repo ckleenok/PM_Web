@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 import os
 from supabase import create_client, Client
+import re
 
 # --- 컬럼 순서 및 상수 ---
 COLUMNS = [
@@ -112,6 +113,23 @@ def calculate_indicators(df):
     df['Upper'] = df['MA20'] + 2 * df['STD20']
     return df
 
+def is_safari():
+    # Streamlit에서 User-Agent를 감지하여 사파리(특히 iOS) 여부를 반환
+    user_agent = st.session_state.get('user_agent', None)
+    if user_agent is None:
+        user_agent = st.experimental_get_query_params().get('user_agent', [None])[0]
+    if user_agent is None:
+        # JS로 User-Agent를 세션에 저장하도록 유도
+        st.markdown("""
+        <script>
+        window.parent.postMessage({user_agent: navigator.userAgent}, '*');
+        </script>
+        """, unsafe_allow_html=True)
+        st.session_state['user_agent'] = None
+        return False
+    # iPhone/iPad/Mac Safari 감지
+    return bool(re.search(r"(iPhone|iPad|Macintosh).*Safari", user_agent))
+
 def main():
     st.set_page_config(page_title="Portfolio Manager v3 (Web)", layout="wide")
     st.title("Portfolio Manager v3 (Web)")
@@ -213,34 +231,36 @@ def main():
             df.insert(0, 'selected', False)
         else:
             df['selected'] = df['selected'].fillna(False)
-        edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
 
-        # 선택 삭제 버튼
-        if st.button("선택 삭제"):
-            filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
-            st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
-            save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
-
-        # 수익률 재계산 버튼
-        if st.button("수익률 재계산"):
-            for i, row in edited_df.iterrows():
-                try:
-                    buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
-                    current_price = float(row["Current Price"])
-                    if buy_price:
-                        profit_pct = (current_price - buy_price) / buy_price * 100
-                        edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
-                        edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
-                    else:
+        if is_safari():
+            st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
+            st.dataframe(df)
+        else:
+            edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor")
+            # 선택 삭제 버튼
+            if st.button("선택 삭제"):
+                filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
+                st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
+                save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
+            # 수익률 재계산 버튼
+            if st.button("수익률 재계산"):
+                for i, row in edited_df.iterrows():
+                    try:
+                        buy_price = float(row["Buy Price"]) if row["Buy Price"] != "" else None
+                        current_price = float(row["Current Price"])
+                        if buy_price:
+                            profit_pct = (current_price - buy_price) / buy_price * 100
+                            edited_df.at[i, "Return"] = f"{profit_pct:.2f}%"
+                            edited_df.at[i, "Profit ≥ 7%"] = "✔️" if profit_pct >= 7 else "❌"
+                        else:
+                            edited_df.at[i, "Return"] = ""
+                            edited_df.at[i, "Profit ≥ 7%"] = ""
+                    except Exception:
                         edited_df.at[i, "Return"] = ""
                         edited_df.at[i, "Profit ≥ 7%"] = ""
-                except Exception:
-                    edited_df.at[i, "Return"] = ""
-                    edited_df.at[i, "Profit ≥ 7%"] = ""
+                st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
+            # 세션 상태 업데이트 (편집 내용 반영)
             st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
-
-        # 세션 상태 업데이트 (편집 내용 반영)
-        st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
 
 if __name__ == "__main__":
     main() 
