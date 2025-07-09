@@ -221,39 +221,31 @@ def main():
         macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(4, -1, -1)}
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
-            macd_col_map["MACD_4"], macd_col_map["MACD_3"], macd_col_map["MACD_2"], macd_col_map["MACD_1"], macd_col_map["MACD_0"],
+            macd_dates[4], macd_dates[3], macd_dates[2], macd_dates[1], macd_dates[0],
             "Profit ≥ 7%", "Bollinger Touch"
         ]
-        # 내부 데이터는 MACD_4~MACD_0, 표시 컬럼은 날짜 포함
-        df = df.rename(columns=macd_col_map)
-        df = df.reindex(columns=[col for col in display_columns if col != "No."])
-        df.insert(0, "No.", range(1, len(df) + 1))
-        # 볼린저 정규화: (close - Upper) 기준, 6개월간 min/max로 -100~100
-        if 'Current Price' in df.columns and 'Bollinger Touch' in df.columns:
-            for idx, row in df.iterrows():
-                try:
-                    # 티커별로 6개월 데이터 다시 불러와서 정규화
-                    ticker_name = row.get('Company Name', '')
-                    # (여기서는 이미 값이 있으므로, pass)
-                    pass
-                except Exception:
-                    pass
+        # 내부 데이터는 MACD_4~MACD_0, 표시 컬럼은 날짜만
+        df_display = df.rename(columns=macd_col_map)
+        df_display = df_display.reindex(columns=[col for col in display_columns if col != "No."])
+        df_display.insert(0, "No.", range(1, len(df_display) + 1))
         # 체크박스 컬럼 추가
-        if 'selected' not in df.columns:
-            df.insert(0, 'selected', False)
+        if 'selected' not in df_display.columns:
+            df_display.insert(0, 'selected', False)
         else:
-            df['selected'] = df['selected'].fillna(False)
+            df_display['selected'] = df_display['selected'].fillna(False)
 
         if is_safari():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
-            st.dataframe(df)
+            st.dataframe(df_display)
         else:
             editor_key = f"data_editor_{uuid.uuid4()}"
-            edited_df = st.data_editor(df, num_rows="dynamic", key=editor_key)
+            edited_df = st.data_editor(df_display, num_rows="dynamic", key=editor_key)
             # 선택 삭제 버튼
             if st.button("선택 삭제"):
-                # 최신 edited_df에서 selected가 True인 행을 삭제
                 filtered_df = edited_df[~edited_df['selected']].reset_index(drop=True)
+                # 날짜 컬럼을 다시 MACD_4~MACD_0으로 변환
+                reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
+                filtered_df = filtered_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = filtered_df.drop(columns=["No.", "selected"]).to_dict('records')
                 save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
                 st.experimental_rerun()
@@ -273,9 +265,14 @@ def main():
                     except Exception:
                         edited_df.at[i, "Return"] = ""
                         edited_df.at[i, "Profit ≥ 7%"] = ""
+                # 날짜 컬럼을 다시 MACD_4~MACD_0으로 변환
+                reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
+                edited_df = edited_df.rename(columns=reverse_macd_col_map)
                 st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
                 st.experimental_rerun()
             # 세션 상태 업데이트 (편집 내용 반영)
+            reverse_macd_col_map = {v: k for k, v in macd_col_map.items()}
+            edited_df = edited_df.rename(columns=reverse_macd_col_map)
             st.session_state['data'] = edited_df.drop(columns=["No.", "selected"]).to_dict('records')
 
 if __name__ == "__main__":
