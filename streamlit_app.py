@@ -145,6 +145,7 @@ def main():
     query_user_agent = st.query_params.get('user_agent', [None])[0]
     if query_user_agent is not None and st.session_state.get('user_agent', None) is None:
         st.session_state['user_agent'] = unquote(query_user_agent)
+        st.query_params.clear()
         st.rerun()
 
     if 'data' not in st.session_state:
