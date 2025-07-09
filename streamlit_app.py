@@ -215,6 +215,10 @@ def main():
     # 표 표시 및 편집
     if st.session_state['data']:
         df = pd.DataFrame(st.session_state['data'])
+        # Buy Price, Current Price에 콤마 포맷 적용
+        for col in ["Buy Price", "Current Price"]:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: f"{int(float(x)):,}" if str(x).replace('.', '', 1).isdigit() and x != '' else x)
         # MACD 날짜 컬럼명 동적 생성
         today = datetime.now().date()
         macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
