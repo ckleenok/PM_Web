@@ -11,6 +11,7 @@ import re
 import uuid
 from streamlit_autorefresh import st_autorefresh
 import pytz
+from urllib.parse import unquote
 
 # --- 컬럼 순서 및 상수 ---
 COLUMNS = [
@@ -120,15 +121,17 @@ def is_safari():
     # Streamlit에서 User-Agent를 감지하여 사파리(특히 iOS) 여부를 반환
     user_agent = st.session_state.get('user_agent', None)
     if user_agent is None:
-        user_agent = st.query_params.get('user_agent', [None])[0]
-    if user_agent is None:
-        # JS로 User-Agent를 세션에 저장하도록 유도
+        # JS로 User-Agent를 세션에 저장하도록 유도 (최초 1회만)
         st.markdown("""
         <script>
         window.parent.postMessage({user_agent: navigator.userAgent}, '*');
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.user_agent) {
+                window.location.search = '?user_agent=' + encodeURIComponent(event.data.user_agent);
+            }
+        });
         </script>
         """, unsafe_allow_html=True)
-        st.session_state['user_agent'] = None
         return False
     # iPhone/iPad/Mac Safari 감지
     return bool(re.search(r"(iPhone|iPad|Macintosh).*Safari", user_agent))
@@ -144,6 +147,12 @@ def main():
     if 7 <= now.hour < 14:
         st_autorefresh(interval=30*60*1000, key="datarefresh")
     st.title("Portfolio Manager v3 (Web)")
+
+    # 쿼리 파라미터에 user_agent가 있으면 세션에 저장하고, 한 번만 rerun
+    query_user_agent = st.query_params.get('user_agent', [None])[0]
+    if query_user_agent is not None and st.session_state.get('user_agent', None) is None:
+        st.session_state['user_agent'] = unquote(query_user_agent)
+        st.rerun()
 
     if 'data' not in st.session_state:
         # 앱 첫 접속 시 Supabase에서 자동으로 데이터 불러오기
