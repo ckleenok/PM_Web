@@ -310,7 +310,8 @@ def main():
         ]
         df_display = pd.DataFrame(display_rows)
         # === 표시용 데이터프레임에서도 빈 row 제거 ===
-        df_display = df_display[df_display['Company Name'] != '']
+        if not df_display.empty and 'Company Name' in df_display.columns:
+            df_display = df_display[df_display['Company Name'] != '']
         df_display = df_display.reindex(columns=[col for col in display_columns if col != "No."])
         df_display.insert(0, "No.", range(1, len(df_display) + 1))
         # 체크박스 컬럼 추가
