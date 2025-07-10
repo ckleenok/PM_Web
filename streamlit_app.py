@@ -199,6 +199,7 @@ def main():
                             boll_norm = 0
                         current_price = df['close'].iloc[-1]
                         row_dict = {
+                            "Ticker": ticker_code,
                             "Company Name": company_name,
                             "Buy Price": "",
                             "Current Price": current_price,
@@ -246,14 +247,12 @@ def main():
         total_tickers = len(st.session_state['data'])
         status_placeholder = st.empty()
         for idx, row in enumerate(st.session_state['data']):
-            ticker_code = None
+            ticker_code = row.get('Ticker', None)
             # 티커코드 추출 (Company Name에서 추출 불가시, row에 별도 저장 필요)
             # 여기서는 Company Name이 아닌, row에 'Ticker' 필드가 있다고 가정
-            if 'Ticker' in row:
-                ticker_code = row['Ticker']
-            elif 'Company Name' in row:
-                # Company Name만 있을 경우, 티커코드 추출 불가(추가 구현 필요)
-                ticker_code = None
+            if ticker_code is None:
+                ticker_code = row.get('Company Name', '').split('(')[-1].replace(')', '').strip() if '(' in row.get('Company Name', '') else None
+
             buy_price = parse_number(row.get('Buy Price', ''))
             company_name = row.get('Company Name', '')
             status_placeholder.info(f"처리 중: {company_name} ({ticker_code if ticker_code else ''}) [{idx+1}/{total_tickers}]")
