@@ -244,6 +244,7 @@ def main():
         macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
         macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(5)}
         total_tickers = len(st.session_state['data'])
+        status_placeholder = st.empty()
         for idx, row in enumerate(st.session_state['data']):
             ticker_code = None
             # 티커코드 추출 (Company Name에서 추출 불가시, row에 별도 저장 필요)
@@ -255,7 +256,8 @@ def main():
                 ticker_code = None
             buy_price = parse_number(row.get('Buy Price', ''))
             company_name = row.get('Company Name', '')
-            st.info(f"처리 중: {company_name} ({ticker_code if ticker_code else ''}) [{idx+1}/{total_tickers}]")
+            status_placeholder.info(f"처리 중: {company_name} ({ticker_code if ticker_code else ''}) [{idx+1}/{total_tickers}]")
+            time.sleep(0.1)
             # 네이버에서 최신 가격 및 지표 받아오기
             current_price = ''
             profit_pct = ''
@@ -296,6 +298,7 @@ def main():
                 "Bollinger Touch": round(boll_norm, 2) if boll_norm != '' else '',
             }
             display_rows.append(display_row)
+        status_placeholder.empty()
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
             macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
