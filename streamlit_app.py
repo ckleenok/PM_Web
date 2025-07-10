@@ -238,22 +238,68 @@ def main():
 
     # 표 표시 및 편집
     if st.session_state['data']:
-        df = pd.DataFrame(st.session_state['data'])
-        # Buy Price, Current Price에 콤마 포맷 적용
-        for col in ["Buy Price", "Current Price"]:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: f"{int(float(x)):,}" if str(x).replace('.', '', 1).isdigit() and x != '' else x)
-        # MACD 날짜 컬럼명 동적 생성
+        # 최신 가격/수익률/Profit ≥ 7%를 실시간으로 계산해서 표시
+        display_rows = []
         today = datetime.now().date()
         macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
         macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(5)}
+        for row in st.session_state['data']:
+            ticker_code = None
+            # 티커코드 추출 (Company Name에서 추출 불가시, row에 별도 저장 필요)
+            # 여기서는 Company Name이 아닌, row에 'Ticker' 필드가 있다고 가정
+            if 'Ticker' in row:
+                ticker_code = row['Ticker']
+            elif 'Company Name' in row:
+                # Company Name만 있을 경우, 티커코드 추출 불가(추가 구현 필요)
+                ticker_code = None
+            buy_price = parse_number(row.get('Buy Price', ''))
+            company_name = row.get('Company Name', '')
+            # 네이버에서 최신 가격 및 지표 받아오기
+            current_price = ''
+            profit_pct = ''
+            profit_flag = ''
+            macd_recent5 = [None]*5
+            boll_norm = ''
+            if ticker_code:
+                df = get_naver_price_history(ticker_code, months=6)
+                if not df.empty:
+                    df = calculate_indicators(df)
+                    current_price = df['close'].iloc[-1]
+                    if buy_price:
+                        profit_pct = (current_price - buy_price) / buy_price * 100
+                        profit_flag = "✔️" if profit_pct >= 7 else "❌"
+                    else:
+                        profit_pct = ''
+                        profit_flag = ''
+                    macd_recent5 = df['MACD_Norm'].iloc[-5:].round(2).tolist()
+                    bollinger_diff = df['close'] - df['Upper']
+                    boll_min = bollinger_diff.min()
+                    boll_max = bollinger_diff.max()
+                    if boll_max - boll_min != 0:
+                        boll_norm = (bollinger_diff.iloc[-1] - boll_min) / (boll_max - boll_min) * 200 - 100
+                    else:
+                        boll_norm = 0
+            display_row = {
+                "No.": "",
+                "Company Name": company_name,
+                "Buy Price": f"{int(buy_price):,}" if buy_price else '',
+                "Current Price": f"{int(current_price):,}" if current_price else '',
+                "Return": f"{profit_pct:.2f}%" if profit_pct != '' else '',
+                macd_col_map["MACD_4"]: macd_recent5[4] if macd_recent5[4] is not None else '',
+                macd_col_map["MACD_3"]: macd_recent5[3] if macd_recent5[3] is not None else '',
+                macd_col_map["MACD_2"]: macd_recent5[2] if macd_recent5[2] is not None else '',
+                macd_col_map["MACD_1"]: macd_recent5[1] if macd_recent5[1] is not None else '',
+                macd_col_map["MACD_0"]: macd_recent5[0] if macd_recent5[0] is not None else '',
+                "Profit ≥ 7%": profit_flag,
+                "Bollinger Touch": round(boll_norm, 2) if boll_norm != '' else '',
+            }
+            display_rows.append(display_row)
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
             macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
             "Profit ≥ 7%", "Bollinger Touch"
         ]
-        # 내부 데이터는 MACD_4~MACD_0, 표시 컬럼은 날짜만
-        df_display = df.rename(columns=macd_col_map)
+        df_display = pd.DataFrame(display_rows)
         df_display = df_display.reindex(columns=[col for col in display_columns if col != "No."])
         df_display.insert(0, "No.", range(1, len(df_display) + 1))
         # 체크박스 컬럼 추가
