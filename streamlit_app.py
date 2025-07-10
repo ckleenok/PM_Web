@@ -186,7 +186,7 @@ def main():
                 with st.spinner("데이터 불러오는 중..."):
                     df = get_naver_price_history(ticker_code, months=6)
                     if not df.empty:
-                        company_name = get_naver_company_name(ticker_code)
+                        company_name = get_naver_company_name(ticker_code) or ticker_code
                         df = calculate_indicators(df)
                         macd_recent5 = df['MACD_Norm'].iloc[-5:].round(2).tolist()
                         # 볼린저 정규화: (close - Upper) 기준, 6개월간 min/max로 -100~100
@@ -214,6 +214,7 @@ def main():
                         }
                         ordered_row = {col: row_dict.get(col, "") for col in COLUMNS if col != "No."}
                         st.session_state['data'].append(ordered_row)
+                        st.write("session_state['data'] after add:", st.session_state['data'])
                     else:
                         st.warning("데이터를 불러올 수 없습니다.")
             else:
@@ -239,10 +240,10 @@ def main():
 
     # 표 표시 및 편집
     if st.session_state['data']:
-        # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거 ===
+        # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거: Ticker만 있으면 row 유지 ===
         st.session_state['data'] = [
             row for row in st.session_state['data']
-            if row.get('Ticker') and row.get('Company Name')
+            if row.get('Ticker')
         ]
         # 최신 가격/수익률/Profit ≥ 7%를 실시간으로 계산해서 표시
         display_rows = []
