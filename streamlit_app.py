@@ -243,7 +243,8 @@ def main():
         today = datetime.now().date()
         macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
         macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(5)}
-        for row in st.session_state['data']:
+        total_tickers = len(st.session_state['data'])
+        for idx, row in enumerate(st.session_state['data']):
             ticker_code = None
             # 티커코드 추출 (Company Name에서 추출 불가시, row에 별도 저장 필요)
             # 여기서는 Company Name이 아닌, row에 'Ticker' 필드가 있다고 가정
@@ -254,6 +255,7 @@ def main():
                 ticker_code = None
             buy_price = parse_number(row.get('Buy Price', ''))
             company_name = row.get('Company Name', '')
+            st.info(f"처리 중: {company_name} ({ticker_code if ticker_code else ''}) [{idx+1}/{total_tickers}]")
             # 네이버에서 최신 가격 및 지표 받아오기
             current_price = ''
             profit_pct = ''
