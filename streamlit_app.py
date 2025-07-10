@@ -239,6 +239,11 @@ def main():
 
     # 표 표시 및 편집
     if st.session_state['data']:
+        # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거 ===
+        st.session_state['data'] = [
+            row for row in st.session_state['data']
+            if row.get('Ticker') and row.get('Company Name')
+        ]
         # 최신 가격/수익률/Profit ≥ 7%를 실시간으로 계산해서 표시
         display_rows = []
         today = datetime.now().date()
@@ -304,6 +309,8 @@ def main():
             "Profit ≥ 7%", "Bollinger Touch"
         ]
         df_display = pd.DataFrame(display_rows)
+        # === 표시용 데이터프레임에서도 빈 row 제거 ===
+        df_display = df_display[df_display['Company Name'] != '']
         df_display = df_display.reindex(columns=[col for col in display_columns if col != "No."])
         df_display.insert(0, "No.", range(1, len(df_display) + 1))
         # 체크박스 컬럼 추가
