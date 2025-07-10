@@ -254,16 +254,10 @@ def main():
         status_placeholder = st.empty()
         for idx, row in enumerate(st.session_state['data']):
             ticker_code = row.get('Ticker', None)
-            # 티커코드 추출 (Company Name에서 추출 불가시, row에 별도 저장 필요)
-            # 여기서는 Company Name이 아닌, row에 'Ticker' 필드가 있다고 가정
-            if ticker_code is None:
-                ticker_code = row.get('Company Name', '').split('(')[-1].replace(')', '').strip() if '(' in row.get('Company Name', '') else None
-
             buy_price = parse_number(row.get('Buy Price', ''))
             company_name = row.get('Company Name', '')
             status_placeholder.info(f"처리 중: {company_name} ({ticker_code if ticker_code else ''}) [{idx+1}/{total_tickers}]")
             time.sleep(0.1)
-            # 네이버에서 최신 가격 및 지표 받아오기
             current_price = ''
             profit_pct = ''
             profit_flag = ''
@@ -288,21 +282,41 @@ def main():
                         boll_norm = (bollinger_diff.iloc[-1] - boll_min) / (boll_max - boll_min) * 200 - 100
                     else:
                         boll_norm = 0
-            display_row = {
-                "No.": "",
-                "Company Name": company_name,
-                "Buy Price": f"{int(buy_price):,}" if buy_price else '',
-                "Current Price": f"{int(current_price):,}" if current_price else '',
-                "Return": f"{profit_pct:.2f}%" if profit_pct != '' else '',
-                macd_col_map["MACD_4"]: macd_recent5[4] if macd_recent5[4] is not None else '',
-                macd_col_map["MACD_3"]: macd_recent5[3] if macd_recent5[3] is not None else '',
-                macd_col_map["MACD_2"]: macd_recent5[2] if macd_recent5[2] is not None else '',
-                macd_col_map["MACD_1"]: macd_recent5[1] if macd_recent5[1] is not None else '',
-                macd_col_map["MACD_0"]: macd_recent5[0] if macd_recent5[0] is not None else '',
-                "Profit ≥ 7%": profit_flag,
-                "Bollinger Touch": round(boll_norm, 2) if boll_norm != '' else '',
-            }
-            display_rows.append(display_row)
+                    display_row = {
+                        "No.": "",
+                        "Company Name": company_name,
+                        "Buy Price": f"{int(buy_price):,}" if buy_price else '',
+                        "Current Price": f"{int(current_price):,}" if current_price else '',
+                        "Return": f"{profit_pct:.2f}%" if profit_pct != '' else '',
+                        macd_col_map["MACD_4"]: macd_recent5[4] if macd_recent5[4] is not None else '',
+                        macd_col_map["MACD_3"]: macd_recent5[3] if macd_recent5[3] is not None else '',
+                        macd_col_map["MACD_2"]: macd_recent5[2] if macd_recent5[2] is not None else '',
+                        macd_col_map["MACD_1"]: macd_recent5[1] if macd_recent5[1] is not None else '',
+                        macd_col_map["MACD_0"]: macd_recent5[0] if macd_recent5[0] is not None else '',
+                        "Profit ≥ 7%": profit_flag,
+                        "Bollinger Touch": round(boll_norm, 2) if boll_norm != '' else '',
+                    }
+                    display_rows.append(display_row)
+                else:
+                    # 네이버 데이터가 없으면 session_state['data']의 값을 그대로 사용
+                    display_row = {
+                        "No.": "",
+                        "Company Name": row.get("Company Name", ""),
+                        "Buy Price": row.get("Buy Price", ""),
+                        "Current Price": row.get("Current Price", ""),
+                        "Return": row.get("Return", ""),
+                        macd_col_map["MACD_4"]: row.get("MACD_4", ""),
+                        macd_col_map["MACD_3"]: row.get("MACD_3", ""),
+                        macd_col_map["MACD_2"]: row.get("MACD_2", ""),
+                        macd_col_map["MACD_1"]: row.get("MACD_1", ""),
+                        macd_col_map["MACD_0"]: row.get("MACD_0", ""),
+                        "Profit ≥ 7%": row.get("Profit ≥ 7%", ""),
+                        "Bollinger Touch": row.get("Bollinger Touch", ""),
+                    }
+                    display_rows.append(display_row)
+            else:
+                # Ticker가 없으면 row를 건너뜀
+                continue
         status_placeholder.empty()
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
