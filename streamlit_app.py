@@ -41,7 +41,7 @@ def to_serializable(data):
     ]
 
 def save_to_supabase(user_id, data):
-    res = supabase.table("portfolio").upsert({"user_id": user_id, "data": data}).execute()
+    res = supabase.table("portfolio").upsert([{"user_id": user_id, "data": data}]).execute()
     print("Supabase upsert result:", res)
     try:
         import streamlit as st
