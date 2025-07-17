@@ -41,10 +41,22 @@ def to_serializable(data):
     ]
 
 def save_to_supabase(user_id, data):
-    supabase.table("portfolio").upsert({"user_id": user_id, "data": data}).execute()
+    res = supabase.table("portfolio").upsert({"user_id": user_id, "data": data}).execute()
+    print("Supabase upsert result:", res)
+    try:
+        import streamlit as st
+        st.write("Supabase upsert result:", res)
+    except Exception:
+        pass
 
 def load_from_supabase(user_id):
     res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+    print("Supabase load result:", res)
+    try:
+        import streamlit as st
+        st.write("Supabase load result:", res)
+    except Exception:
+        pass
     if res.data:
         df = pd.DataFrame(res.data[0]["data"])
         df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
