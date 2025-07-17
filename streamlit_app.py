@@ -198,8 +198,8 @@ def main():
                         else:
                             boll_norm = 0
                         current_price = df['close'].iloc[-1]
+                        # Ensure all display columns are present in the row dict
                         row_dict = {
-                            "Ticker": ticker_code,
                             "Company Name": company_name,
                             "Buy Price": "",
                             "Current Price": current_price,
@@ -211,9 +211,14 @@ def main():
                             "MACD_0": macd_recent5[0] if len(macd_recent5) > 0 else "",
                             "Profit ≥ 7%": "",
                             "Bollinger Touch": round(boll_norm, 2),
+                            # Add Ticker for internal use, but not for display
+                            "Ticker": ticker_code,
                         }
-                        ordered_row = {col: row_dict.get(col, "") for col in COLUMNS if col != "No."}
-                        st.session_state['data'].append(ordered_row)
+                        # Fill missing columns with empty string
+                        for col in COLUMNS:
+                            if col != "No." and col not in row_dict:
+                                row_dict[col] = ""
+                        st.session_state['data'].append(row_dict)
                         st.write("session_state['data'] after add:", st.session_state['data'])
                     else:
                         st.warning("데이터를 불러올 수 없습니다.")
@@ -335,6 +340,9 @@ def main():
             df_display.insert(0, 'selected', False)
         else:
             df_display['selected'] = df_display['selected'].fillna(False)
+        # Debug prints for troubleshooting
+        st.write("DEBUG: session_state['data'] just before display:", st.session_state['data'])
+        st.write("DEBUG: df_display just before display:", df_display)
 
         if is_safari():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
