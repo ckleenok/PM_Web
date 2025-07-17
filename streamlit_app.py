@@ -267,8 +267,15 @@ def main():
     if st.session_state['data']:
         # Ensure all required columns are present in each row before display
         fixed_data = []
+        today = datetime.now().date()
+        macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
+        macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(5)}
         for row in st.session_state['data']:
             fixed_row = {col: row.get(col, "") for col in COLUMNS if col != "No."}
+            # Map MACD_4~MACD_0 to date columns for display
+            for macd_key, date_col in macd_col_map.items():
+                if macd_key in fixed_row:
+                    fixed_row[date_col] = fixed_row[macd_key]
             # Preserve Ticker if present
             if 'Ticker' in row:
                 fixed_row['Ticker'] = row['Ticker']
@@ -279,7 +286,7 @@ def main():
         # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거: Ticker만 있으면 row 유지 ===
         st.session_state['data'] = [
             row for row in st.session_state['data']
-            if row.get('Ticker')
+            if row.get('Ticker') or row.get('Company Name')
         ]
         # 최신 가격/수익률/Profit ≥ 7%를 실시간으로 계산해서 표시
         display_rows = []
