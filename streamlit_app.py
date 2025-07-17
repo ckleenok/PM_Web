@@ -340,9 +340,6 @@ def main():
             df_display.insert(0, 'selected', False)
         else:
             df_display['selected'] = df_display['selected'].fillna(False)
-        # Debug prints for troubleshooting
-        st.write("DEBUG: session_state['data'] just before display:", st.session_state['data'])
-        st.write("DEBUG: df_display just before display:", df_display)
 
         if is_safari():
             st.info('iOS 사파리에서는 표가 읽기 전용으로 표시됩니다.')
