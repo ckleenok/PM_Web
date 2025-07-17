@@ -30,6 +30,8 @@ USER_ID = "test_user"
 
 def to_serializable(data):
     def convert_value(val):
+        if val is None or (isinstance(val, float) and (np.isnan(val) or np.isinf(val))):
+            return ""
         if isinstance(val, (np.generic, np.ndarray)):
             return val.item() if hasattr(val, 'item') else val.tolist()
         if isinstance(val, (pd.Timestamp, pd.Timedelta)):
@@ -41,6 +43,13 @@ def to_serializable(data):
     ]
 
 def save_to_supabase(user_id, data):
+    import json
+    print("Saving to Supabase:", json.dumps(data, ensure_ascii=False))
+    try:
+        import streamlit as st
+        st.write("Saving to Supabase:", data)
+    except Exception:
+        pass
     res = supabase.table("portfolio").upsert([{"user_id": user_id, "data": data}]).execute()
     print("Supabase upsert result:", res)
     try:
