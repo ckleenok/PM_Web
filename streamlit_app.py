@@ -41,7 +41,7 @@ def to_serializable(data):
     ]
 
 def save_to_supabase(user_id, data):
-    supabase.table("portfolio").insert({"user_id": user_id, "data": data}).execute()
+    supabase.table("portfolio").upsert({"user_id": user_id, "data": data}).execute()
 
 def load_from_supabase(user_id):
     res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
