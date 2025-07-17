@@ -265,6 +265,17 @@ def main():
 
     # 표 표시 및 편집
     if st.session_state['data']:
+        # Ensure all required columns are present in each row before display
+        fixed_data = []
+        for row in st.session_state['data']:
+            fixed_row = {col: row.get(col, "") for col in COLUMNS if col != "No."}
+            # Preserve Ticker if present
+            if 'Ticker' in row:
+                fixed_row['Ticker'] = row['Ticker']
+            fixed_data.append(fixed_row)
+        st.session_state['data'] = fixed_data
+        # Debug print before displaying the table
+        st.write("DEBUG: session_state['data'] before display:", st.session_state['data'])
         # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거: Ticker만 있으면 row 유지 ===
         st.session_state['data'] = [
             row for row in st.session_state['data']
