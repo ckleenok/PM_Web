@@ -175,10 +175,16 @@ def main():
         # 앱 첫 접속 시 Supabase에서 자동으로 데이터 불러오기
         data = load_from_supabase(USER_ID)
         if data:
-            df = pd.DataFrame(data)
-            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
-            df.insert(0, "No.", range(1, len(df) + 1))
-            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+            # Ensure all required columns are present in each row
+            fixed_data = []
+            for row in data:
+                fixed_row = {col: row.get(col, "") for col in COLUMNS if col != "No."}
+                # Preserve Ticker if present
+                if 'Ticker' in row:
+                    fixed_row['Ticker'] = row['Ticker']
+                fixed_data.append(fixed_row)
+            st.session_state['data'] = fixed_data
+            st.write("DEBUG: session_state['data'] after load:", st.session_state['data'])
         else:
             st.session_state['data'] = []
 
