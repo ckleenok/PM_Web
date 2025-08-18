@@ -43,22 +43,14 @@ def to_serializable(data):
     ]
 
 def save_to_supabase(user_id, data):
-    import json
-    print("Saving to Supabase (type):", type(data))
-    print("Saving to Supabase (json):", json.dumps(data, ensure_ascii=False))
     try:
-        import streamlit as st
-        st.write("Saving to Supabase (type):", str(type(data)))
-        st.write("Saving to Supabase (json):", data)
-    except Exception:
-        pass
-    res = supabase.table("portfolio").upsert([{"user_id": user_id, "data": data}]).execute()
-    print("Supabase upsert result:", res)
-    try:
-        import streamlit as st
-        st.write("Supabase upsert result:", res)
-    except Exception:
-        pass
+        # 기존 레코드 제거 후 새로 저장 (upsert 대신 안전한 delete+insert)
+        supabase.table("portfolio").delete().eq("user_id", user_id).execute()
+        supabase.table("portfolio").insert({"user_id": user_id, "data": data}).execute()
+        st.toast("Supabase에 저장 완료", icon="✅")
+    except Exception as e:
+        st.warning("Supabase 저장 실패: 오프라인 모드로 계속합니다.")
+        st.session_state["supabase_error"] = str(e)
 
 def load_from_supabase(user_id):
     try:
