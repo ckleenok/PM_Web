@@ -61,19 +61,17 @@ def save_to_supabase(user_id, data):
         pass
 
 def load_from_supabase(user_id):
-    res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
-    print("Supabase load result:", res)
     try:
-        import streamlit as st
-        st.write("Supabase load result:", res)
-    except Exception:
-        pass
-    if res.data:
-        df = pd.DataFrame(res.data[0]["data"])
-        df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
-        df.insert(0, "No.", range(1, len(df) + 1))
-        return df.to_dict('records')
-    return []
+        res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        if res.data:
+            df = pd.DataFrame(res.data[0]["data"])
+            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+            df.insert(0, "No.", range(1, len(df) + 1))
+            return df.to_dict('records')
+        return []
+    except Exception as e:
+        st.session_state["supabase_error"] = str(e)
+        return []
 
 def delete_supabase_data(user_id):
     supabase.table("portfolio").delete().eq("user_id", user_id).execute()
@@ -186,18 +184,14 @@ def main():
         # 앱 첫 접속 시 Supabase에서 자동으로 데이터 불러오기
         data = load_from_supabase(USER_ID)
         if data:
-            # Ensure all required columns are present in each row
-            fixed_data = []
-            for row in data:
-                fixed_row = {col: row.get(col, "") for col in COLUMNS if col != "No."}
-                # Preserve Ticker if present
-                if 'Ticker' in row:
-                    fixed_row['Ticker'] = row['Ticker']
-                fixed_data.append(fixed_row)
-            st.session_state['data'] = fixed_data
-            st.write("DEBUG: session_state['data'] after load:", st.session_state['data'])
+            df = pd.DataFrame(data)
+            df = df.reindex(columns=[col for col in COLUMNS if col != "No."])
+            df.insert(0, "No.", range(1, len(df) + 1))
+            st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
         else:
             st.session_state['data'] = []
+        if st.session_state.get("supabase_error"):
+            st.warning("Supabase 연결에 실패했습니다. 오프라인 모드로 실행합니다.")
 
     # 티커 입력
     with st.form(key="add_ticker_form"):
