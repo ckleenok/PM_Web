@@ -262,29 +262,7 @@ def main():
 
     # 표 표시 및 편집
     if st.session_state['data']:
-        # Ensure all required columns are present in each row before display
-        fixed_data = []
-        today = datetime.now().date()
-        macd_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4, -1, -1)]
-        macd_col_map = {f"MACD_{i}": macd_dates[i] for i in range(5)}
-        for row in st.session_state['data']:
-            fixed_row = {col: row.get(col, "") for col in COLUMNS if col != "No."}
-            # Map MACD_4~MACD_0 to date columns for display
-            for macd_key, date_col in macd_col_map.items():
-                if macd_key in fixed_row:
-                    fixed_row[date_col] = fixed_row[macd_key]
-            # Preserve Ticker if present
-            if 'Ticker' in row:
-                fixed_row['Ticker'] = row['Ticker']
-            fixed_data.append(fixed_row)
-        st.session_state['data'] = fixed_data
-        # Debug print before displaying the table
-        st.write("DEBUG: session_state['data'] before display:", st.session_state['data'])
-        # === 빈 row(주요 컬럼이 비어있는 row) 자동 제거: Ticker만 있으면 row 유지 ===
-        st.session_state['data'] = [
-            row for row in st.session_state['data']
-            if row.get('Ticker') or row.get('Company Name')
-        ]
+        # === 빈 row 자동 제거는 하지 않고, 기존 row를 그대로 표시합니다 (Ticker 없어도 표시) ===
         # 최신 가격/수익률/Profit ≥ 7%를 실시간으로 계산해서 표시
         display_rows = []
         today = datetime.now().date()
@@ -338,25 +316,47 @@ def main():
                     }
                     display_rows.append(display_row)
                 else:
-                    # 네이버 데이터가 없으면 session_state['data']의 값을 그대로 사용
-                    display_row = {
-                        "No.": "",
+                    # 네이버 데이터가 없으면 session_state의 값을 표 컬럼명에 맞춰 표시
+                    display_row = {col: "" for col in [
+                        "Company Name", "Buy Price", "Current Price", "Return",
+                        macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
+                        "Profit ≥ 7%", "Bollinger Touch"
+                    ]}
+                    display_row.update({
                         "Company Name": row.get("Company Name", ""),
                         "Buy Price": row.get("Buy Price", ""),
                         "Current Price": row.get("Current Price", ""),
                         "Return": row.get("Return", ""),
-                        macd_col_map["MACD_4"]: row.get("MACD_4", ""),
-                        macd_col_map["MACD_3"]: row.get("MACD_3", ""),
-                        macd_col_map["MACD_2"]: row.get("MACD_2", ""),
-                        macd_col_map["MACD_1"]: row.get("MACD_1", ""),
-                        macd_col_map["MACD_0"]: row.get("MACD_0", ""),
+                        macd_dates[0]: row.get("MACD_4", ""),
+                        macd_dates[1]: row.get("MACD_3", ""),
+                        macd_dates[2]: row.get("MACD_2", ""),
+                        macd_dates[3]: row.get("MACD_1", ""),
+                        macd_dates[4]: row.get("MACD_0", ""),
                         "Profit ≥ 7%": row.get("Profit ≥ 7%", ""),
                         "Bollinger Touch": row.get("Bollinger Touch", ""),
-                    }
+                    })
                     display_rows.append(display_row)
             else:
-                # Ticker가 없으면 row를 건너뜀
-                continue
+                # Ticker가 없더라도 session_state의 값으로 표시
+                display_row = {col: "" for col in [
+                    "Company Name", "Buy Price", "Current Price", "Return",
+                    macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
+                    "Profit ≥ 7%", "Bollinger Touch"
+                ]}
+                display_row.update({
+                    "Company Name": row.get("Company Name", ""),
+                    "Buy Price": row.get("Buy Price", ""),
+                    "Current Price": row.get("Current Price", ""),
+                    "Return": row.get("Return", ""),
+                    macd_dates[0]: row.get("MACD_4", ""),
+                    macd_dates[1]: row.get("MACD_3", ""),
+                    macd_dates[2]: row.get("MACD_2", ""),
+                    macd_dates[3]: row.get("MACD_1", ""),
+                    macd_dates[4]: row.get("MACD_0", ""),
+                    "Profit ≥ 7%": row.get("Profit ≥ 7%", ""),
+                    "Bollinger Touch": row.get("Bollinger Touch", ""),
+                })
+                display_rows.append(display_row)
         status_placeholder.empty()
         display_columns = [
             "No.", "Company Name", "Buy Price", "Current Price", "Return",
