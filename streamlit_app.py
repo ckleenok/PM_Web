@@ -236,7 +236,6 @@ def main():
                         st.session_state['data'].append(row_dict)
                         # Auto-save to Supabase after adding ticker
                         save_to_supabase(USER_ID, to_serializable(st.session_state['data']))
-                        st.write("session_state['data'] after add:", st.session_state['data'])
                     else:
                         st.warning("데이터를 불러올 수 없습니다.")
             else:
