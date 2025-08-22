@@ -119,6 +119,24 @@ def get_naver_company_name(ticker):
         return name
     return ""
 
+def find_ticker_by_company_name(company_name):
+    try:
+        query = requests.utils.quote(company_name)
+        url = f"https://finance.naver.com/search/searchList.naver?query={query}"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        res = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        # 첫 번째 종목의 코드 추출
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if 'item/main.nhn?code=' in href:
+                code = href.split('code=')[-1][:6]
+                if code.isdigit() and len(code) == 6:
+                    return code
+        return None
+    except Exception:
+        return None
+
 def calculate_indicators(df):
     df = df.copy()
     df = df.set_index('date')
@@ -186,9 +204,16 @@ def main():
             df = pd.DataFrame(data)
             # Ticker 필드를 보존하면서 표시용 번호 컬럼만 제거
             if "No." in df.columns:
-                st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+                loaded_rows = df.drop(columns=["No."]).to_dict('records')
             else:
-                st.session_state['data'] = df.to_dict('records')
+                loaded_rows = df.to_dict('records')
+            # 누락된 Ticker를 회사명으로 보완 시도
+            for r in loaded_rows:
+                if not r.get('Ticker') and r.get('Company Name'):
+                    inferred = find_ticker_by_company_name(r.get('Company Name'))
+                    if inferred:
+                        r['Ticker'] = inferred
+            st.session_state['data'] = loaded_rows
         else:
             st.session_state['data'] = []
         if st.session_state.get("supabase_error"):
@@ -263,9 +288,15 @@ def main():
             df = pd.DataFrame(data)
             # Ticker 필드를 보존하면서 표시용 번호 컬럼만 제거
             if "No." in df.columns:
-                st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
+                loaded_rows = df.drop(columns=["No."]).to_dict('records')
             else:
-                st.session_state['data'] = df.to_dict('records')
+                loaded_rows = df.to_dict('records')
+            for r in loaded_rows:
+                if not r.get('Ticker') and r.get('Company Name'):
+                    inferred = find_ticker_by_company_name(r.get('Company Name'))
+                    if inferred:
+                        r['Ticker'] = inferred
+            st.session_state['data'] = loaded_rows
             st.success("Supabase에서 불러오기 완료!")
         else:
             st.warning("데이터를 불러올 수 없습니다.")
@@ -348,6 +379,45 @@ def main():
                     display_rows.append(display_row)
             else:
                 # Ticker가 없더라도 session_state의 값으로 표시
+                # 누락된 Ticker를 회사명으로 보완 시도 후 재계산
+                inferred_ticker = None
+                if row.get('Company Name'):
+                    inferred_ticker = find_ticker_by_company_name(row.get('Company Name'))
+                if inferred_ticker:
+                    df = get_naver_price_history(inferred_ticker, months=6)
+                    if not df.empty:
+                        df = calculate_indicators(df)
+                        current_price = df['close'].iloc[-1]
+                        if buy_price:
+                            profit_pct = (current_price - buy_price) / buy_price * 100
+                            profit_flag = "✔️" if profit_pct >= 7 else "❌"
+                        else:
+                            profit_pct = ''
+                            profit_flag = ''
+                        macd_recent5 = df['MACD_Norm'].iloc[-5:].round(2).tolist()
+                        bollinger_diff = df['close'] - df['Upper']
+                        boll_min = bollinger_diff.min()
+                        boll_max = bollinger_diff.max()
+                        if boll_max - boll_min != 0:
+                            boll_norm = (bollinger_diff.iloc[-1] - boll_min) / (boll_max - boll_min) * 200 - 100
+                        else:
+                            boll_norm = 0
+                        display_row = {
+                            "No.": "",
+                            "Company Name": company_name,
+                            "Buy Price": f"{int(buy_price):,}" if buy_price else '',
+                            "Current Price": f"{int(current_price):,}" if current_price else '',
+                            "Return": f"{profit_pct:.2f}%" if profit_pct != '' else '',
+                            macd_col_map["MACD_4"]: macd_recent5[4] if macd_recent5[4] is not None else '',
+                            macd_col_map["MACD_3"]: macd_recent5[3] if macd_recent5[3] is not None else '',
+                            macd_col_map["MACD_2"]: macd_recent5[2] if macd_recent5[2] is not None else '',
+                            macd_col_map["MACD_1"]: macd_recent5[1] if macd_recent5[1] is not None else '',
+                            macd_col_map["MACD_0"]: macd_recent5[0] if macd_recent5[0] is not None else '',
+                            "Profit ≥ 7%": profit_flag,
+                            "Bollinger Touch": round(boll_norm, 2) if boll_norm != '' else '',
+                        }
+                        display_rows.append(display_row)
+                        continue
                 display_row = {col: "" for col in [
                     "Company Name", "Buy Price", "Current Price", "Return",
                     macd_dates[0], macd_dates[1], macd_dates[2], macd_dates[3], macd_dates[4],
