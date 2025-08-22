@@ -57,10 +57,14 @@ def load_from_supabase(user_id):
         res = supabase.table("portfolio").select("data").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
         if res.data:
             df = pd.DataFrame(res.data[0]["data"])
-            # 필수 컬럼이 없으면 추가하되, 기존의 'Ticker' 등 추가 정보는 보존
-            for col in COLUMNS:
-                if col != "No." and col not in df.columns:
+            # Ticker 필드는 보존하고, 표시용 컬럼만 정리
+            display_cols = [col for col in COLUMNS if col != "No."]
+            for col in display_cols:
+                if col not in df.columns:
                     df[col] = ""
+            # Ticker가 없으면 빈 문자열로 설정 (기존 데이터 호환성)
+            if "Ticker" not in df.columns:
+                df["Ticker"] = ""
             df.insert(0, "No.", range(1, len(df) + 1))
             return df.to_dict('records')
         return []
@@ -180,7 +184,7 @@ def main():
         data = load_from_supabase(USER_ID)
         if data:
             df = pd.DataFrame(data)
-            # 불러온 데이터 그대로 사용하되, 내부 상태에는 표시용 번호 컬럼은 제거
+            # Ticker 필드를 보존하면서 표시용 번호 컬럼만 제거
             if "No." in df.columns:
                 st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
             else:
@@ -257,6 +261,7 @@ def main():
         data = load_from_supabase(USER_ID)
         if data:
             df = pd.DataFrame(data)
+            # Ticker 필드를 보존하면서 표시용 번호 컬럼만 제거
             if "No." in df.columns:
                 st.session_state['data'] = df.drop(columns=["No."]).to_dict('records')
             else:
